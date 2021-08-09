@@ -4,21 +4,34 @@ GANの様々なモデルを一元管理し、コマンドラインにより使�
 
 ## Supported Models
 
+### Modules
+
+- MLP (fc_module)
+
+### Activation Modules
+
+- Softmax
+- L2Softmax
+- ArcFace
+- CosFace
+
 ## Supported Data
 
-## Author
-
-Nakai, Yu. The University of Tokyo
+- [宗教画の分類](https://prob.space/competitions/religious_art) のデータ
 
 ## Set Up
 
-* download sample data
+* download data
+  
+  最初に次を実行し、学習に必要なデータをダウンロード・配置する
 
     ```bash
     $ make
     ```
 
 * docker build image & create container
+
+  dockerのコンテナを立ち上げる
 
     ```bash
     $ docker-compose up -d --build
@@ -28,7 +41,13 @@ Nakai, Yu. The University of Tokyo
 
 ## Command
 
+### usage
+
+学習方法あれこれ
+
 ### docker usage
+
+以下はdockerの基本的な使用方法
 
 * start
 
