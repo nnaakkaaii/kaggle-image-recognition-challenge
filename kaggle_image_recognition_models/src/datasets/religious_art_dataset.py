@@ -4,7 +4,6 @@ from typing import Any, Dict
 
 import numpy as np
 import torch
-# from torchvision.datasets import MNIST
 
 from . import base_dataset
 
@@ -41,11 +40,25 @@ def dataset_modify_commandline_options(parser: argparse.ArgumentParser) -> argpa
 #         return {'x': x, 't': t}
 
 
-class TrainDataset(base_dataset.BaseDataset):
-    def __init__(self, transform: Any, max_dataset_size: int, img_dir: str, target_dir: str, is_train: bool) -> None:
-        self.image = np.load(img_dir)['arr_0']
-        self.target = np.load(target_dir)['arr_0']
+class ReligiousArtDataset(base_dataset.BaseDataset):
+    """宗教画コンペに利用するtrain-val用データセット
+    渡すtransformをtrain-val別に指定。
+    img_dirに画像データのパスを指定。
+    target_dirにtargetラベルのパスを指定。
+    is_trainはtrain-valをboolで使い分け
+    train_ratioはtrain-valを何%をtrainにするかを指定
+    """
+    def __init__(self, transform: Any, max_dataset_size: int, img_dir: str, target_dir: Any, is_train: bool, train_ratio: float) -> None:
+        image = np.load(img_dir)['arr_0']
+        target = np.load(target_dir)['arr_0']
+        self.is_train = is_train
         self.transform = transform
+        if is_train:
+            self.image = image[:int(len(image) * train_ratio)]
+            self.target = target[:int(len(target) * train_ratio)]
+        else:
+            self.image = image[int(len(image) * train_ratio):]
+            self.target = target[int(len(target) * train_ratio):]
         super().__init__(max_dataset_size, len(self.image), is_train)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
@@ -59,25 +72,6 @@ class TrainDataset(base_dataset.BaseDataset):
         return {
             'x': torch.tensor(image, dtype=torch.float),
             't': torch.tensor(target, dtype=torch.float).long(),
-        }
-
-
-class TestDataset(base_dataset.BaseDataset):
-    # train_ratioはcross validationに任せるため消去
-    def __init__(self, transform: Any, max_dataset_size: int, test_dir: str, is_train: bool) -> None:
-        self.image = np.load(test_dir)['arr_0']
-        self.transform = transform
-        super().__init__(max_dataset_size, len(self.image), is_train)
-
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        image = self.image[idx]
-        if self.transform is not None:
-            transformed = self.transform(image=image)
-            image = transformed['image']
-        else:
-            image = image[np.newaxis, :, :]
-        return {
-            'x': torch.tensor(image, dtype=torch.float),
         }
 
 
