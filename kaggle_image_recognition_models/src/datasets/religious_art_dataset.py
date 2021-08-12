@@ -8,50 +8,30 @@ import torch
 from . import base_dataset
 
 
-def create_train_dataset(transform: Any, is_train: bool, opt: argparse.Namespace) -> base_dataset.BaseDataset:
-    return TrainDataset(transform, opt.max_dataset_size, opt.img_dir, opt.target_dir, is_train)
-
-
-def create_test_dataset(transform: Any, is_train: bool, opt: argparse.Namespace) -> base_dataset.BaseDataset:
-    return TestDataset(transform, opt.max_dataset_size, opt.img_dir, is_train)
+def create_dataset(transform: Any, is_train: bool, opt: argparse.Namespace) -> base_dataset.BaseDataset:
+    return ReligiousArtDataset(transform, opt.max_dataset_size, opt.img_path, opt.target_path, is_train, opt.train_ratio)
 
 
 def dataset_modify_commandline_options(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    parser.add_argument('--img_dir', type=str, default=os.path.join('inputs', 'mnist'), help='mnistデータを保存する場所')
+    parser.add_argument('--img_path', type=str, default=os.path.join('inputs', 'religious_art', 'christ-train-imgs.npz'), help='入力データへのパス')
+    parser.add_argument('--target_path', type=str, default=os.path.join('inputs', 'religious_art', 'christ-train-labels.npz'), help='ラベルへのパス, test時は利用しない')
     return parser
-
-
-# class MnistDataset(base_dataset.BaseDataset):
-#     """torchvisionのMNISTを利用したデータセット
-#     MNISTのDatasetの並び順が変更しないというメタ知識を前提としている
-#     渡すtransformも変更する
-#     """
-#     def __init__(self, transform: Any, max_dataset_size: int, img_dir: str, is_train: bool, train_ratio: float) -> None:
-#         dataset = MNIST(img_dir, download=True, transform=transform)
-#         if is_train:
-#             self.dataset = dataset[:int(len(dataset) * train_ratio)]
-#         else:
-#             self.dataset = dataset[int(len(dataset) * train_ratio):]
-#
-#         super().__init__(max_dataset_size, len(self.dataset), is_train)
-#
-#     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-#         x, t = self.dataset[idx]
-#         return {'x': x, 't': t}
 
 
 class ReligiousArtDataset(base_dataset.BaseDataset):
     """宗教画コンペに利用するtrain-val用データセット
-    渡すtransformをtrain-val別に指定。
-    img_dirに画像データのパスを指定。
-    target_dirにtargetラベルのパスを指定。
-    is_trainはtrain-valをboolで使い分け
-    train_ratioはtrain-valを何%をtrainにするかを指定
     """
-    def __init__(self, transform: Any, max_dataset_size: int, img_dir: str, target_dir: Any, is_train: bool, train_ratio: float) -> None:
-        image = np.load(img_dir)['arr_0']
-        target = np.load(target_dir)['arr_0']
-        self.is_train = is_train
+    def __init__(self, transform: Any, max_dataset_size: int, img_path: str, target_path: str, is_train: bool, train_ratio: float) -> None:
+        """
+        :param transform: 渡すtransformをtrain-val別に指定。
+        :param max_dataset_size:
+        :param img_path: 画像データのパスを指定。
+        :param target_path: targetラベルのパスを指定
+        :param is_train: train-valをboolで使い分け
+        :param train_ratio: train-valを何%をtrainにするかを指定
+        """
+        image = np.load(img_path)['arr_0']
+        target = np.load(target_path)['arr_0']
         self.transform = transform
         if is_train:
             self.image = image[:int(len(image) * train_ratio)]
@@ -62,16 +42,33 @@ class ReligiousArtDataset(base_dataset.BaseDataset):
         super().__init__(max_dataset_size, len(self.image), is_train)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        image = self.image[idx]
+        image = torch.from_numpy(self.image[idx]).float()
         target = self.target[idx]
         if self.transform is not None:
-            transformed = self.transform(image=image)
-            image = transformed['image']
-        else:
-            image = image[np.newaxis, :, :]
+            image = self.transform(image)
         return {
-            'x': torch.tensor(image, dtype=torch.float),
+            'x': image,
             't': torch.tensor(target, dtype=torch.float).long(),
         }
 
 
+if __name__ == '__main__':
+    # python3 -m kaggle_image_recognition_models.src.datasets.religious_art_dataset
+    from torchvision.transforms import transforms
+
+    parser = argparse.ArgumentParser()
+    parser = dataset_modify_commandline_options(parser)
+    parser.add_argument('--max_dataset_size', type=int, default=10**8)
+    parser.add_argument('--train_ratio', type=float, default=0.8)
+    args = parser.parse_args()
+
+    vanilla_dataset = create_dataset(None, True, args)
+    for i in range(len(vanilla_dataset)):
+        if i % (len(vanilla_dataset) // 2 + 1) == 0:
+            print(vanilla_dataset[i]['x'].shape, vanilla_dataset[i]['t'])
+
+    transform = transforms.Compose([transforms.Normalize((0.5,), (0.5,))])
+    simple_dataset = create_dataset(transform, True, args)
+    for i in range(len(simple_dataset)):
+        if i % (len(simple_dataset) // 2 + 1) == 0:
+            print(simple_dataset[i]['x'].shape, simple_dataset[i]['t'])
