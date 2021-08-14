@@ -7,6 +7,7 @@ from ..datasets import datasets, dataset_options
 from ..dataloaders import dataloader_options, dataloaders
 from ..loggers import logger_options, loggers
 from ..models import model_options, models
+from ..utils import utils_optins, utils
 
 
 class BaseOption:
@@ -72,6 +73,10 @@ class BaseOption:
         opt, _ = parser.parse_known_args()  # extract arguments; modify following arguments dynamically
         logger_option_setter = logger_options[opt.logger_name]
         parser = logger_option_setter(parser)
+
+        opt, _ = parser.parse_known_args() # extract arguments; modify following arguments dynamically
+        utils_commandline_options = utils_optins['seed']
+        parser = utils_commandline_options(parser)
 
         self.parser = parser
 

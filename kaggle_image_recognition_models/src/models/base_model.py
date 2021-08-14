@@ -62,7 +62,7 @@ class BaseModel(AbstractModel, metaclass=abc.ABCMeta):
 
         self.gpu_ids = opt.gpu_ids
         self.is_train = opt.is_train  # activation moduleなどに学習状況を渡すために状態保持
-        self.output_nch = opt.output_nch
+        self.output_nch = opt.out_dim
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
 
         self.loss = torch.tensor(0)  # criterionより計算したロス
