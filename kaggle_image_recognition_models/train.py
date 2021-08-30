@@ -1,4 +1,6 @@
 import argparse
+from sklearn.model_selection import StratifiedKFold
+from torch.utils.data import Subset
 
 from src.datasets import datasets
 from src.transforms import transforms
@@ -9,6 +11,17 @@ from src.options.train_option import TrainOption
 
 
 def train(opt: argparse.Namespace) -> None:
+    transform = transforms[opt.train_transform_name](opt)
+    dataset = datasets[opt.dataset_name](transform, True, opt)
+
+    k_fold = StratifiedKFold(n_splits=opt.k_fold, random_state=opt.k_fold_random_seed, shuffle=True)
+    for i, (train_index, test_index) in enumerate(k_fold.split(dataset)):  
+        train = Subset(dataset, train_index)
+        test = Subset(dataset, test_index)
+
+        # trainloader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
+        # testloader = DataLoader(test, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
+
     train_transform = transforms[opt.train_transform_name](opt)
     train_dataset = datasets[opt.dataset_name](train_transform, True, opt)
     train_dataloader = dataloaders[opt.dataloader_name](train_dataset, opt)
